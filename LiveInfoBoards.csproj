@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>LiveInfoBoards</AssemblyName>
+    <RootNamespace>LiveInfoBoards</RootNamespace>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GamePath>/game</GamePath>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="MelonLoader"><HintPath>$(GamePath)/MelonLoader/net35/MelonLoader.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Root.Township"><HintPath>$(GamePath)/A Township Tale_Data/Managed/Root.Township.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Alta.IO"><HintPath>$(GamePath)/A Township Tale_Data/Managed/Alta.IO.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(GamePath)/A Township Tale_Data/Managed/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Properties/AssemblyInfo.cs" />
+    <Compile Include="InfoBoardDocument.cs" />
+    <Compile Include="InfoBoardAuthority.cs" />
+    <Compile Include="InfoBoardDiagnosticFormatter.cs" />
+    <Compile Include="InfoBoardRegistryDocument.cs" />
+    <Compile Include="InfoBoardRegistryAuthority.cs" />
+    <Compile Include="InfoBoardRegistryCleanup.cs" />
+    <Compile Include="Core.cs" />
+  </ItemGroup>
+</Project>
