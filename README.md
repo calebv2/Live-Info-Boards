@@ -11,7 +11,7 @@ copy it to the server's `game-source/Mods` directory, and restart the server
 once to load the mod. On its first server boot it creates:
 
 ```text
-game-source/UserData/InfoBoards.json
+/UserData/InfoBoards.json
 ```
 
 ## Build from source
@@ -19,7 +19,7 @@ game-source/UserData/InfoBoards.json
 Build against the local game files:
 
 ```bash
-./build.sh /home/ATT/a-township-container/game-source
+./build.sh /home/ATT/a-township-container/game
 ```
 
 The build writes `bin/LiveInfoBoards.dll`.
@@ -75,5 +75,5 @@ entity ID `4772` and channel `welcome`.
 
 ```bash
 ./tests/run-tests.sh
-./build.sh /home/ATT/a-township-container/game-source
+./build.sh /home/ATT/a-township-container/game
 ```
