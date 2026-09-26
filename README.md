@@ -6,13 +6,23 @@ own or alongside the Prefab Editor mod. Players do not need to install anything.
 
 ## Install
 
-Download `LiveInfoBoards.dll` from the [latest release](https://github.com/calebv2/Live-Info-Boards/releases/latest),
-copy it to the server's `game-source/Mods` directory, and restart the server
-once to load the mod. On its first server boot it creates:
+Download `LiveInfoBoards.dll` from the [latest release](https://github.com/calebv2/Live-Info-Boards/releases/latest)
+and copy it into the server's `Mods` directory under the active game root.
+Depending on the server setup, that may be `/game-source/Mods` or `/game/Mods`.
+Restart the server once to load the mod.
+
+On first boot, the mod creates `InfoBoards.json` in MelonLoader's active
+`UserData` directory. Common paths are:
 
 ```text
-/UserData/InfoBoards.json
+/game-source/UserData/InfoBoards.json
+/game/UserData/InfoBoards.json
 ```
+
+Some hosting setups mount the game directory directly, so the same file may
+appear as `/UserData/InfoBoards.json`. Use the path belonging to the active
+server; you do not need to create or maintain multiple copies. The mod reads
+the file from MelonLoader's active `UserData` directory.
 
 ## Build from source
 
@@ -70,10 +80,3 @@ entity ID `4772` and channel `welcome`.
 - Use `\n` inside JSON text for a line break.
 - Removing a JSON property deliberately does not blank a board. Use the game's
   ordinary infoboard command if you want to clear a channel.
-
-## Tests
-
-```bash
-./tests/run-tests.sh
-./build.sh /home/ATT/a-township-container/game
-```
