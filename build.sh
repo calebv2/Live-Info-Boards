@@ -12,4 +12,4 @@ mcs -target:library -langversion:latest \
   -r:"$game_path/A Township Tale_Data/Managed/Root.Township.dll" \
   -r:"$game_path/A Township Tale_Data/Managed/Alta.IO.dll" \
   -r:"$game_path/A Township Tale_Data/Managed/UnityEngine.CoreModule.dll" \
-  Properties/AssemblyInfo.cs InfoBoardDocument.cs InfoBoardAuthority.cs InfoBoardDiagnosticFormatter.cs InfoBoardPlacementTracker.cs InfoBoardRegistryDocument.cs InfoBoardRegistryAuthority.cs InfoBoardRegistryCleanup.cs Core.cs
+  Properties/AssemblyInfo.cs InfoBoardDocument.cs InfoBoardAuthority.cs InfoBoardDiagnosticFormatter.cs InfoBoardPlacementTracker.cs InfoBoardRegistryDocument.cs InfoBoardRegistryAuthority.cs InfoBoardRegistryCleanup.cs InfoBoardConfigurationCache.cs Core.cs

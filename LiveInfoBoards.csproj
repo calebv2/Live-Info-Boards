@@ -23,6 +23,8 @@
     <Compile Include="InfoBoardRegistryDocument.cs" />
     <Compile Include="InfoBoardRegistryAuthority.cs" />
     <Compile Include="InfoBoardRegistryCleanup.cs" />
+    <Compile Include="InfoBoardConfigurationCache.cs" />
+    <Compile Include="InfoBoardPlacementTracker.cs" />
     <Compile Include="Core.cs" />
   </ItemGroup>
 </Project>

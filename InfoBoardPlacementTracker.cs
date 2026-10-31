@@ -18,6 +18,8 @@ public sealed class InfoBoardPlacementTracker
         this.settleSeconds = settleSeconds;
     }
 
+    public void Forget(uint boardId) { observations.Remove(boardId); }
+
     public bool TryGetSettledKey(uint boardId, string positionKey, float now, out string settledKey)
     {
         string ignored;
@@ -31,9 +33,8 @@ public sealed class InfoBoardPlacementTracker
         Observation observation;
         if (!observations.TryGetValue(boardId, out observation))
         {
-            observations.Add(boardId, new Observation { ObservedKey = positionKey, ObservedAt = now, SettledKey = positionKey });
-            settledKey = positionKey;
-            return true;
+            observations.Add(boardId, new Observation { ObservedKey = positionKey, ObservedAt = now });
+            return false;
         }
 
         if (!string.Equals(observation.ObservedKey, positionKey, StringComparison.Ordinal))
@@ -41,13 +42,13 @@ public sealed class InfoBoardPlacementTracker
             observation.ObservedKey = positionKey;
             observation.ObservedAt = now;
             settledKey = observation.SettledKey;
-            return true;
+            return settledKey != null;
         }
 
         if (now - observation.ObservedAt < settleSeconds)
         {
             settledKey = observation.SettledKey;
-            return true;
+            return settledKey != null;
         }
         settledKey = positionKey;
         if (!string.Equals(observation.SettledKey, positionKey, StringComparison.Ordinal))

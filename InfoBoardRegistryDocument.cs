@@ -57,6 +57,7 @@ public static class InfoBoardRegistryDocument
             error = "InfoBoards.json must contain a single 'boards' object.";
             return false;
         }
+        var channels = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (KeyValuePair<string, Value> entry in root["boards"].Object)
         {
             if (entry.Value.Object == null)
@@ -69,6 +70,11 @@ public static class InfoBoardRegistryDocument
             if ((entry.Value.Object.Count != 2 && entry.Value.Object.Count != 3) || !entry.Value.Object.TryGetValue("channel", out channel) || !entry.Value.Object.TryGetValue("text", out text) || channel.Text == null || text.Text == null)
             {
                 error = "Board '" + entry.Key + "' must contain string 'channel' and 'text' properties.";
+                return false;
+            }
+            if (!channels.Add(channel.Text))
+            {
+                error = "Channel '" + channel.Text + "' is assigned to more than one board. Give each board a unique channel to prevent shared text files.";
                 return false;
             }
             InfoBoardRotation rotation = null;
