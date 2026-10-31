@@ -1,2 +1,37 @@
-/bin/
-/tests/bin/
+# Build and test output
+bin/
+obj/
+TestResults/
+*.dll
+*.exe
+*.pdb
+*.mdb
+
+# Editor settings
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.sln.docstates
+
+# Local server files
+/UserData/
+/InfoBoard/
+/InfoBoards.json
+/Save/
+/Logs/
+/Mods/
+/MelonLoader/
+
+# Local planning notes
+/docs/**/plans/
+/docs/**/specs/
+
+# Temporary files
+*.log
+*.tmp
+*.bak
+*~
+.DS_Store
+Thumbs.db
