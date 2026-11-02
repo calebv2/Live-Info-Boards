@@ -33,3 +33,19 @@ mcs -langversion:latest \
   "$script_dir/../InfoBoardRegistryCleanup.cs"
 
 mono "$output_dir/LiveInfoBoards.PollingTests.exe"
+
+game_path="${1:-/home/ATT/a-township-container/game-source}"
+mcs -langversion:latest -define:REAL_HARMONY \
+  -r:"$game_path/MelonLoader/net35/0Harmony.dll" \
+  -out:"$output_dir/LiveInfoBoards.LifecycleIntegrationTests.exe" \
+  "$script_dir/LifecycleIntegrationProgram.cs" \
+  "$script_dir/GameBoundary.cs" \
+  "$script_dir/../Core.cs" \
+  "$script_dir/../InfoBoardConfigurationCache.cs" \
+  "$script_dir/../InfoBoardDocument.cs" \
+  "$script_dir/../InfoBoardDiagnosticFormatter.cs" \
+  "$script_dir/../InfoBoardPlacementTracker.cs" \
+  "$script_dir/../InfoBoardRegistryDocument.cs" \
+  "$script_dir/../InfoBoardRegistryAuthority.cs" \
+  "$script_dir/../InfoBoardRegistryCleanup.cs"
+MONO_PATH="$game_path/MelonLoader/net35" mono "$output_dir/LiveInfoBoards.LifecycleIntegrationTests.exe"

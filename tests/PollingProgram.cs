@@ -17,7 +17,8 @@ internal static class PollingProgram
     private static int Main()
     {
         int failures = 0;
-        Action[] tests = { UnchangedConfigurationUsesCachedDefinitions, DiscoveryIsBoundedAndMovementStaysFast,
+        Action[] tests = { UnchangedConfigurationUsesCachedDefinitions, DiscoveryIsEventDrivenAndMovementStaysFast,
+            InactiveAndDisabledBoardsRemainDiscoverable, DestroyBeforeSettlingForgetsPlacement,
             RotationAndPendingVerificationStayFast, MissingAndInvalidConfigurationRecover,
             InvalidRevisionIsCached, UnloadPreservesTextAndForgetsPlacement,
             DeletionUsesCurrentSettledPosition, LegacyMigrationStillDiscoversBoards, RuntimeIdsAreNotTrustedAfterReboot, StartupPositionsDoNotStealText, OccupiedMovePreservesBothEntries, RoundedPositionCollisionIsNotAssigned, ReusedIdsGetUniqueChannels, SharedSaveDataIsDetached, RebootWithReversedIdsPreservesText };
@@ -30,6 +31,7 @@ internal static class PollingProgram
             Time.unscaledTime = 0f;
             UnityEngine.Object.SceneObjects.Clear();
             UnityEngine.Object.SceneScans = 0;
+            HarmonyLib.Harmony.Reset();
             InfoBoard.Refreshes = 0;
             saveFolder = new TestSaveFolder { Root = root };
             ServerHandler.Current = new ServerHandler { SaveUtility = new TestSaveUtility { SaveFolder = saveFolder } };
@@ -51,11 +53,9 @@ internal static class PollingProgram
         if (UnityEngine.Object.SceneObjects.Count > 0)
         {
             typeof(Core).GetField("nextCheckAt", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(core, -3f);
-            typeof(Core).GetField("nextDiscoveryAt", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(core, -3f);
             Tick(core, -3f);
         }
         Tick(core, 0f);
-        typeof(Core).GetField("nextDiscoveryAt", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).SetValue(core, 5f);
         return core;
     }
 
@@ -68,6 +68,7 @@ internal static class PollingProgram
     {
         var board = new InfoBoard(id, channel, new Vector3(x, 2f, 3f));
         UnityEngine.Object.SceneObjects.Add(board);
+        board.Initialize();
         return board;
     }
     private static Dictionary<string, InfoBoardDefinition> ReadDefinitions()
@@ -96,20 +97,60 @@ internal static class PollingProgram
         Assert(File.ReadAllText(saveFolder.Files["welcome"].FullName) == "Longer", "A length edit must reload even if the timestamp is unchanged.");
     }
 
-    private static void DiscoveryIsBoundedAndMovementStaysFast()
+    private static void DiscoveryIsEventDrivenAndMovementStaysFast()
     {
         InfoBoard board = AddBoard(10, "welcome", 1f);
         Core core = Start("{\"boards\":{}}");
         Assert(UnityEngine.Object.SceneScans == 1, "The first poll must scan the scene only once.");
-        AddBoard(20, "other", 9f);
+        InfoBoard lateBoard = AddBoard(20, "other", 9f);
+        lateBoard.Initialize(); // Repeated initialization must not duplicate tracking.
         board.transform.position = new Vector3(4f, 2f, 3f);
         for (int i = 1; i <= 7; i++) Tick(core, i * 0.5f);
         Dictionary<string, InfoBoardDefinition> definitions = ReadDefinitions();
         Assert(definitions.ContainsKey("4.0,2.0,3.0") && !definitions.ContainsKey("1.0,2.0,3.0"), "Cached boards must settle movement after three seconds on fast polls.");
-        Assert(!definitions.ContainsKey("9.0,2.0,3.0") && UnityEngine.Object.SceneScans == 1, "New scene discovery must wait for its own cadence.");
-        Tick(core, 5f);
-        Tick(core, 8f);
-        Assert(ReadDefinitions().ContainsKey("9.0,2.0,3.0") && UnityEngine.Object.SceneScans == 2, "New boards must be discovered at the five-second poll.");
+        Assert(definitions.ContainsKey("9.0,2.0,3.0") && UnityEngine.Object.SceneScans == 1, "Network initialization must discover late boards without another scene scan.");
+        for (int i = 8; i <= 120; i++) Tick(core, i * .5f);
+        Assert(UnityEngine.Object.SceneScans == 1, "An idle minute must not trigger recurring scene discovery.");
+    }
+
+    private static void InactiveAndDisabledBoardsRemainDiscoverable()
+    {
+        InfoBoard dormant = AddBoard(10, "dormant", 1f);
+        dormant.gameObject.activeInHierarchy = false;
+        dormant.enabled = false;
+        Core core = Start("{\"boards\":{}}");
+        Assert(ReadDefinitions().Count == 0 && UnityEngine.Object.SceneScans == 1, "Startup must seed inactive scene objects but defer registration while inactive.");
+        dormant.gameObject.activeInHierarchy = true;
+        Tick(core, .5f); Tick(core, 3.5f);
+        Assert(ReadDefinitions().ContainsKey("1.0,2.0,3.0"), "An already-initialized dormant board must be found when activated, even with its behaviour disabled.");
+        dormant.gameObject.activeInHierarchy = false;
+        dormant.transform.position = new Vector3(4f, 2f, 3f);
+        Tick(core, 4f); Tick(core, 10f);
+        Assert(ReadDefinitions().ContainsKey("1.0,2.0,3.0") && !ReadDefinitions().ContainsKey("4.0,2.0,3.0"), "Inactive boards must not reconcile movement or remove saved text.");
+        dormant.gameObject.activeInHierarchy = true;
+        Tick(core, 10.5f); Tick(core, 13.5f);
+        Assert(ReadDefinitions().ContainsKey("4.0,2.0,3.0"), "Reactivation must resume normal settled movement.");
+        InfoBoard lateInactive = AddBoard(20, "late", 7f);
+        lateInactive.gameObject.activeInHierarchy = false;
+        Tick(core, 14f); Tick(core, 20f);
+        Assert(!ReadDefinitions().ContainsKey("7.0,2.0,3.0"), "A late-loaded inactive board must stay deferred.");
+        lateInactive.gameObject.activeInHierarchy = true;
+        Tick(core, 20.5f); Tick(core, 23.5f);
+        Assert(ReadDefinitions().ContainsKey("7.0,2.0,3.0") && UnityEngine.Object.SceneScans == 1, "A late inactive board must activate through the registry without rescanning.");
+    }
+
+    private static void DestroyBeforeSettlingForgetsPlacement()
+    {
+        Core core = Start("{\"boards\":{}}");
+        InfoBoard board = AddBoard(10, "early", 1f);
+        Tick(core, .5f);
+        board.DestroyUnityObject(); // No settled deletion listener exists yet.
+        InfoBoard replacement = AddBoard(10, "replacement", 1f);
+        Tick(core, 3f);
+        Assert(ReadDefinitions().Count == 0, "A reused ID must not inherit an unregistered destroyed board's placement timer.");
+        Tick(core, 6f);
+        Assert(ReadDefinitions().ContainsKey("1.0,2.0,3.0") && replacement.Channel == "replacement", "Replacement board must settle and register normally.");
+        Assert(UnityEngine.Object.SceneScans == 1, "Destroy and ID reuse must not trigger scene discovery.");
     }
 
     private static void RotationAndPendingVerificationStayFast()
@@ -204,7 +245,7 @@ internal static class PollingProgram
         Tick(core, 5f);
         Tick(core, 8f);
         Assert(ReadDefinitions()["1.0,2.0,3.0"].Text == "Legacy", "Legacy configuration must remain eligible for migration when boards load later.");
-        Assert(UnityEngine.Object.SceneScans == 2, "Migration and reconciliation must share each discovery result.");
+        Assert(UnityEngine.Object.SceneScans == 1, "Migration must discover later initialized boards without another scene scan.");
     }
 
     private static void RuntimeIdsAreNotTrustedAfterReboot()

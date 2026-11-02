@@ -6,6 +6,7 @@ using System.Reflection;
 using Alta.Map;
 using Alta.Networking.Servers;
 using Alta.Utilities;
+using HarmonyLib;
 using MelonLoader;
 using MelonLoader.Utils;
 using UnityEngine;
@@ -15,7 +16,6 @@ namespace LiveInfoBoards
     public sealed class Core : MelonMod
     {
         private const float CheckIntervalSeconds = 0.5f;
-        private const float DiscoveryIntervalSeconds = 5f;
         private const string ConfigurationFileName = "InfoBoards.json";
         private const string ExampleConfiguration = "{\n  \"boards\": {}\n}\n";
         private readonly InfoBoardRegistryAuthority registryAuthority = new InfoBoardRegistryAuthority();
@@ -29,9 +29,10 @@ namespace LiveInfoBoards
         private readonly InfoBoardConfigurationCache configurationCache = new InfoBoardConfigurationCache();
         private static readonly MethodInfo CloneSaveData = typeof(object).GetMethod("MemberwiseClone", BindingFlags.Instance | BindingFlags.NonPublic);
         private static readonly FieldInfo InfoBoardDataField = typeof(InfoBoard).GetField("data", BindingFlags.Instance | BindingFlags.NonPublic);
+        private static Core current;
         private string configurationPath;
         private float nextCheckAt;
-        private float nextDiscoveryAt;
+        private bool discoverySeeded;
         private string lastInvalidContent;
 
         private sealed class LoadedBoard
@@ -58,9 +59,47 @@ namespace LiveInfoBoards
                 LoggerInstance.Warning("Live Info Boards is server-only and will remain disabled on this client.");
                 return;
             }
+            InstallBoardLifecycleHooks();
+            current = this;
             configurationPath = Path.Combine(MelonEnvironment.UserDataDirectory, ConfigurationFileName);
             EnsureExampleConfiguration();
             LoggerInstance.Msg("Live Info Boards watches " + configurationPath + ".");
+        }
+
+        private void InstallBoardLifecycleHooks()
+        {
+            MethodInfo initialize = typeof(InfoBoard).GetMethod(nameof(InfoBoard.Initialize), BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+            MethodInfo destroy = typeof(InfoBoard).GetMethod("OnDestroy", BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+            if (initialize == null || destroy == null)
+                throw new InvalidOperationException("InfoBoard lifecycle methods are unavailable; board tracking cannot initialize.");
+            HarmonyInstance.Patch(initialize, postfix: new HarmonyMethod(typeof(Core), nameof(BoardInitialized)));
+            HarmonyInstance.Patch(destroy, prefix: new HarmonyMethod(typeof(Core), nameof(BoardDestroying)));
+        }
+
+        private static void BoardInitialized(InfoBoard __instance)
+        {
+            if (current != null) current.TrackBoard(__instance);
+        }
+
+        private static void BoardDestroying(InfoBoard __instance)
+        {
+            if (current != null) current.ForgetBoard(__instance);
+        }
+
+        private void TrackBoard(InfoBoard board)
+        {
+            if (board == null || trackedBoards.ContainsKey(board)) return;
+            trackedBoards.Add(board, new LoadedBoard { Board = board });
+        }
+
+        private void ForgetBoard(InfoBoard board)
+        {
+            LoadedBoard loaded;
+            // OnDestroy runs while the Unity object still exists. Keep the
+            // reference check here so a fake-null destroyed key can be removed too.
+            if (ReferenceEquals(board, null) || !trackedBoards.TryGetValue(board, out loaded)) return;
+            trackedBoards.Remove(board);
+            placementTracker.Forget(loaded.Id);
         }
 
         public override void OnUpdate()
@@ -280,14 +319,12 @@ namespace LiveInfoBoards
         {
             loadedBoards.Clear();
             if (InfoBoardDataField == null) return;
-            if (Time.unscaledTime >= nextDiscoveryAt)
+            if (!discoverySeeded)
             {
-                nextDiscoveryAt = Time.unscaledTime + DiscoveryIntervalSeconds;
-                foreach (InfoBoard board in UnityEngine.Object.FindObjectsOfType<InfoBoard>())
-                {
-                    if (board == null || trackedBoards.ContainsKey(board)) continue;
-                    trackedBoards.Add(board, new LoadedBoard { Board = board });
-                }
+                // Include dormant scene objects once so activation is observed
+                // without a broad OnEnable hook or recurring scene discovery.
+                foreach (InfoBoard board in UnityEngine.Object.FindObjectsOfType<InfoBoard>(true)) TrackBoard(board);
+                discoverySeeded = true;
             }
 
             foreach (LoadedBoard loaded in new List<LoadedBoard>(trackedBoards.Values))
@@ -295,8 +332,7 @@ namespace LiveInfoBoards
                 InfoBoard board = loaded.Board;
                 if (board == null)
                 {
-                    trackedBoards.Remove(board);
-                    placementTracker.Forget(loaded.Id);
+                    ForgetBoard(board);
                     continue;
                 }
                 if (!board.gameObject.activeInHierarchy || board.Entity == null) continue;
@@ -330,8 +366,7 @@ namespace LiveInfoBoards
             loaded.DeletionTracked = true;
             loaded.Board.Entity.DestroyedByScene += (entity, isUnload) =>
             {
-                trackedBoards.Remove(loaded.Board);
-                placementTracker.Forget(loaded.Id);
+                ForgetBoard(loaded.Board);
                 if (!isUnload) RemoveDeletedBoard(loaded.RegisteredKey, loaded.Data.identifier);
             };
         }

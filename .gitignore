@@ -23,6 +23,8 @@ TestResults/
 /Logs/
 /Mods/
 /MelonLoader/
+/deployment.json
+/SHA256SUMS.txt
 
 # Local planning notes
 /docs/**/plans/

@@ -11,6 +11,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="MelonLoader"><HintPath>$(GamePath)/MelonLoader/net35/MelonLoader.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(GamePath)/MelonLoader/net35/0Harmony.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Root.Township"><HintPath>$(GamePath)/A Township Tale_Data/Managed/Root.Township.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Alta.IO"><HintPath>$(GamePath)/A Township Tale_Data/Managed/Alta.IO.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(GamePath)/A Township Tale_Data/Managed/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>

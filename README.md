@@ -65,9 +65,13 @@ and writes one warning to the server log. A legacy channel-to-text JSON file is
 migrated automatically on the first run.
 
 Configuration metadata is checked every half second; unchanged revisions reuse
-their parsed definitions. Physical board discovery runs at roughly five-second
-intervals. Cached board positions, rotations, and pending save checks continue
-every half second.
+their parsed definitions. Physical board discovery scans scene objects once at
+startup, including inactive boards. Network initialization registers later boards,
+and destruction removes them from the registry. Cached board positions, rotations,
+and pending save checks continue every half second without recurring scene scans.
+Temporarily inactive boards retain their registrations and resume processing when
+reactivated; disabling a board behaviour does not exclude its active GameObject.
+Chunk unloads preserve text, while actual board deletions retain the normal cleanup.
 
 On startup and as map chunks load, boards must stay at the same rounded
 position for three seconds before registration. Missing positions receive a
@@ -106,3 +110,10 @@ The first message is shown immediately and the list loops.
 bash tests/run-tests.sh
 bash build.sh /home/ATT/a-township-container/game-source
 ```
+
+The tests exercise JSON and registry rules, the polling core against a Unity/save
+boundary, and lifecycle hook dispatch using the game's actual Harmony library.
+They cover startup seeding, late initialization, duplicate initialization, inactive
+and disabled boards, reactivation, unloads, deletions, and early destruction with
+entity ID reuse. The idle polling fixture asserts that discovery performs only
+the initial scene scan. These are boundary tests, not a Unity runtime benchmark.

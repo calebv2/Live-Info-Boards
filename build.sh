@@ -9,7 +9,8 @@ mkdir -p "$output_dir"
 mcs -target:library -langversion:latest \
   -out:"$output_dir/LiveInfoBoards.dll" \
   -r:"$game_path/MelonLoader/net35/MelonLoader.dll" \
+  -r:"$game_path/MelonLoader/net35/0Harmony.dll" \
   -r:"$game_path/A Township Tale_Data/Managed/Root.Township.dll" \
   -r:"$game_path/A Township Tale_Data/Managed/Alta.IO.dll" \
   -r:"$game_path/A Township Tale_Data/Managed/UnityEngine.CoreModule.dll" \
-  Properties/AssemblyInfo.cs InfoBoardDocument.cs InfoBoardAuthority.cs InfoBoardDiagnosticFormatter.cs InfoBoardPlacementTracker.cs InfoBoardRegistryDocument.cs InfoBoardRegistryAuthority.cs InfoBoardRegistryCleanup.cs InfoBoardConfigurationCache.cs Core.cs
+  "$script_dir/Properties/AssemblyInfo.cs" "$script_dir/InfoBoardDocument.cs" "$script_dir/InfoBoardAuthority.cs" "$script_dir/InfoBoardDiagnosticFormatter.cs" "$script_dir/InfoBoardPlacementTracker.cs" "$script_dir/InfoBoardRegistryDocument.cs" "$script_dir/InfoBoardRegistryAuthority.cs" "$script_dir/InfoBoardRegistryCleanup.cs" "$script_dir/InfoBoardConfigurationCache.cs" "$script_dir/Core.cs"
